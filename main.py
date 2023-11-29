@@ -2,13 +2,13 @@ import config
 import httpx, threading, time
 from modules import oauth
 from concurrent.futures import ThreadPoolExecutor
+import tls_client
 
 print("Getting discord build number...")
 try:
     build_num = int(httpx.get("https://raw.githubusercontent.com/EffeDiscord/discord-api/main/fetch").json()['client_build_number'])
 except Exception as e:
     build_num = 179882
-
 
 
 class Token:
@@ -30,6 +30,24 @@ class Token:
             "x-discord-locale": "en-US",
             "x-super-properties": "eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiRGlzY29yZCBDbGllbnQiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJjbGllbnRfdmVyc2lvbiI6IjEuMC45MDExIiwib3NfdmVyc2lvbiI6IjEwLjAuMTkwNDUiLCJvc19hcmNoIjoieDY0Iiwic3lzdGVtX2xvY2FsZSI6ImVuLVVTIiwiY2xpZW50X2J1aWxkX251bWJlciI6MTc5ODgyLCJuYXRpdmVfYnVpbGRfbnVtYmVyIjozMDMwNiwiY2xpZW50X2V2ZW50X3NvdXJjZSI6bnVsbCwiZGVzaWduX2lkIjowfQ=="
         }   # hard coded x-super-properties i know 
+        
+        self.session = tls_client.Session(client_identifier="chrome_107")
+        self.sub_ids = []
+    
+    def boostServer(self, guildID):
+        with open("data/tokens.txt") as f:
+            self.count = len(f.readlines())
+            for line in f.readlines():
+                self.sub_ids.append(line)
+        for i in range(self.count):
+            self.headers["Content-Type"] = "application/json"
+            r = self.session.put(
+                url=f"https://discord.com/api/v9/guilds/{guildID}/premium/subscriptions",
+                headers=self.headers,
+                json={
+                    "user_premium_guild_subscription_slot_ids": [f"{self.sub_ids[i]}"]
+                },
+            )
     
     def _do_oauth(self) -> str:        
         request = httpx.post(
@@ -43,6 +61,7 @@ class Token:
                 },
                 json={"permissions":"0","authorize":True}
             )
+        self.boostServer(config.guild_id)
         if request.status_code != 200:
             return None
         
